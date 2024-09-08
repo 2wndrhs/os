@@ -78,6 +78,16 @@ int argstr(int n, char **pp)
   return fetchstr(addr, pp);
 }
 
+int argoff(int n, off_t *ip)
+{
+  *ip = *(off_t *)(myproc()->tf->esp + 4 + 4 * n);
+  // n번째 인자의 값이 음수일 경우 -1을 리턴
+  if (*ip < 0)
+    return -1;
+
+  return 0;
+}
+
 extern int sys_chdir(void);
 extern int sys_close(void);
 extern int sys_dup(void);
