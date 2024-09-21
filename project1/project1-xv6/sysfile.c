@@ -456,21 +456,31 @@ int sys_pipe(void)
   return 0;
 }
 
+// 시스템 콜 핸들러
 off_t sys_lseek(void)
 {
-  int fd;
-  off_t offset;
-  int whence;
-  struct file *f;
+  int fd;       // lseek 함수의 첫번째 인자인 파일 디스크립터를 저장할 변수
+  off_t offset; // lseek 함수의 두번째 인자인 오프셋을 저장할 변수
+  int whence;   // lseek 함수의 세번째 인자인 whence를 저장할 변수
+
+  struct file *f; // 파일 디스크립터에 대응하는 파일 구조체를 저장할 변수
 
   if (argfd(0, &fd, &f) < 0 || argoff(1, &offset) < 0 || argint(2, &whence) < 0)
   {
     return -1;
   }
 
-  // 파일 디스크립터의 타입이 인덱스 노드(일반 파일)일 경우
+  // 오프셋이 음수일 경우 -1을 리턴
+  if (offset < 0)
+  {
+    return -1;
+  }
+
+  // 파일의 타입이 inode(일반 파일)일 경우
   if (f->type == FD_INODE)
   {
+    off_t new_off; // 새로운 파일 오프셋을 저장할 변수
+
     switch (whence)
     {
     // 파일의 시작 위치를 기준으로 오프셋 설정
@@ -483,7 +493,6 @@ off_t sys_lseek(void)
       break;
     // 파일의 끝 위치를 기준으로 오프셋 설정
     case SEEK_END:
-      // Check for overflow
       f->off = f->ip->size + offset;
       break;
     // whence 값이 0, 1, 2 중 하나가 아니라면 -1을 리턴
@@ -493,4 +502,7 @@ off_t sys_lseek(void)
 
     return f->off;
   }
+
+  // 파일의 타입이 inode(일반 파일)이 아닐 경우 -1을 리턴
+  return -1;
 }
