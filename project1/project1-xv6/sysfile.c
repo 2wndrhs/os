@@ -465,12 +465,13 @@ off_t sys_lseek(void)
 
   struct file *f; // 파일 디스크립터에 대응하는 파일 구조체를 저장할 변수
 
+  // 인자로 받은 파일 디스크립터, 오프셋, whence를 각각 fd, offset, whence에 저장
   if (argfd(0, &fd, &f) < 0 || argoff(1, &offset) < 0 || argint(2, &whence) < 0)
   {
     return -1;
   }
 
-  // 오프셋이 음수일 경우 -1을 리턴
+  // 인자로 받은 오프셋이 음수일 경우 -1을 리턴
   if (offset < 0)
   {
     return -1;
@@ -479,30 +480,65 @@ off_t sys_lseek(void)
   // 파일의 타입이 inode(일반 파일)일 경우
   if (f->type == FD_INODE)
   {
-    off_t new_off; // 새로운 파일 오프셋을 저장할 변수
+    off_t new_off = 0; // 새로운 파일 오프셋을 저장할 변수
 
     switch (whence)
     {
     // 파일의 시작 위치를 기준으로 오프셋 설정
     case SEEK_SET:
-      f->off = offset;
+      new_off = offset;
       break;
     // 현재 파일 오프셋을 기준으로 오프셋 설정
     case SEEK_CUR:
-      f->off += offset;
+      new_off += f->off + offset;
       break;
     // 파일의 끝 위치를 기준으로 오프셋 설정
     case SEEK_END:
-      f->off = f->ip->size + offset;
+      new_off = f->ip->size + offset;
       break;
     // whence 값이 0, 1, 2 중 하나가 아니라면 -1을 리턴
     default:
       return -1;
     }
 
+    // 새로운 파일 오프셋이 파일의 크기보다 큰 경우
+    if (new_off > f->ip->size)
+    {
+      // 파일 시스템 일관성 유지를 위해 트랜젝션으로 처리
+      begin_op();
+      // inode에 대한 동시 접근 방지
+      ilock(f->ip);
+
+      // 파일 크기와 새로운 파일 오프셋의 차이만큼 0으로 채워진 버퍼 생성
+      int bytes_to_add = new_off - f->ip->size;
+      char zero_buf[bytes_to_add];
+      memset(zero_buf, 0, bytes_to_add);
+
+      // 파일의 끝에 0으로 채워진 버퍼를 추가
+      if (writei(f->ip, zero_buf, f->ip->size, bytes_to_add) != bytes_to_add)
+      {
+        // writei() 함수가 실패할 경우 트랜젝션 종료 후 -1을 리턴
+        iunlock(f->ip);
+        end_op();
+        return -1;
+      }
+
+      // 파일 크기를 새로운 파일 오프셋으로 업데이트
+      f->ip->size = new_off;
+      // inode 정보를 디스크와 동기화
+      iupdate(f->ip);
+      // inode 잠금 해제
+      iunlock(f->ip);
+      // 트랜젝션 종료
+      end_op();
+    }
+
+    // 파일 오프셋을 새로운 파일 오프셋으로 업데이트
+    f->off = new_off;
+    // 새로운 파일 오프셋을 리턴
     return f->off;
   }
 
-  // 파일의 타입이 inode(일반 파일)이 아닐 경우 -1을 리턴
+  // 파일의 타입이 inode(일반 파일)가 아닐 경우 -1을 리턴
   return -1;
 }
