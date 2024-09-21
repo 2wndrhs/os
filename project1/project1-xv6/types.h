@@ -4,5 +4,5 @@ typedef unsigned char uchar;
 typedef uint pde_t;
 
 #ifndef _OFF_T
-typedef unsigned int off_t;
+typedef int off_t;
 #endif
