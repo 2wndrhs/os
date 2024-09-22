@@ -456,7 +456,7 @@ int sys_pipe(void)
   return 0;
 }
 
-// 시스템 콜 핸들러
+// lseek 시스템 콜 핸들러
 off_t sys_lseek(void)
 {
   int fd;       // lseek 함수의 첫번째 인자인 파일 디스크립터를 저장할 변수

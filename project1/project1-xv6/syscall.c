@@ -78,8 +78,10 @@ int argstr(int n, char **pp)
   return fetchstr(addr, pp);
 }
 
+// 시스템 콜 핸들러에 전달된 offset 인자를 처리하는 함수
 int argoff(int n, off_t *ip)
 {
+  // 시스템 콜 핸들러가 호출될 때 스택에 저장된 인자 중 n번째 인자의 값을 ip에 저장
   *ip = *(off_t *)(myproc()->tf->esp + 4 + 4 * n);
   // n번째 인자의 값이 음수일 경우 -1을 리턴
   if (*ip < 0)
