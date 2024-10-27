@@ -90,6 +90,10 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
 CFLAGS += -fno-pie -nopie
 endif
 
+ifeq ($(debug), 1)
+CFLAGS += -DDEBUG
+endif
+
 xv6.img: bootblock kernel
 	dd if=/dev/zero of=xv6.img count=10000
 	dd if=bootblock of=xv6.img conv=notrunc
@@ -181,6 +185,9 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_test1-1\
+	_test1-2\
+	_test1-3\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -253,6 +260,7 @@ EXTRA=\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
+	test1-1.c test1-2.c test1-3.c\
 
 dist:
 	rm -rf dist
