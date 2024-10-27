@@ -92,3 +92,15 @@ int sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int sys_set_proc_info(void)
+{
+  int q_level, cpu_burst, cpu_wait_time, io_wait_time, end_time;
+
+  if (argint(0, &q_level) < 0 || argint(1, &cpu_burst) < 0 ||
+      argint(2, &cpu_wait_time) < 0 || argint(3, &io_wait_time) < 0 ||
+      argint(4, &end_time) < 0)
+    return -1;
+
+  return set_proc_info(q_level, cpu_burst, cpu_wait_time, io_wait_time, end_time);
+}

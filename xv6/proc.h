@@ -65,7 +65,9 @@ struct proc
   int cpu_burst;    // Time Slice 내에서 CPU 사용 시간
   int cpu_wait;     // RUNNABLE 상태에서 대기한 시간
   int io_wait_time; // SLEEPING 상태에서 대기한 시간
-  int end_time;     // 총 CPU 할당량
+  int end_time;     // 프로세스의 총 CPU 할당량
+
+  int total_cpu_time; // 프로세스가 CPU를 사용한 총 시간
 };
 
 // Process memory is laid out contiguously, low addresses first:

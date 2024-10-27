@@ -112,7 +112,8 @@ found:
   p->cpu_burst = 0;
   p->cpu_wait = 0;
   p->io_wait_time = 0;
-  p->end_time = 0;
+  p->end_time = -1;
+  p->total_cpu_time = 0;
 
   // init, idle, shell 프로세스는 최하위 큐에 배치
   if (p->pid <= 2)
@@ -252,6 +253,11 @@ int fork(void)
 
   release(&ptable.lock);
 
+#ifdef DEBUG
+  if (np)
+    cprintf("PID: %d created\n", pid);
+#endif
+
   return pid;
 }
 
@@ -388,7 +394,7 @@ void scheduler(void)
           continue;
 
         // Select process with highest I/O wait time
-        if (p->io_wait_time >= max_io_wait)
+        if (p->io_wait_time > max_io_wait)
         {
           max_io_wait = p->io_wait_time;
           selected = p;
@@ -401,6 +407,12 @@ void scheduler(void)
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
+
+#ifdef SCHEDULER_DEBUG
+        if (p)
+          cprintf("scheduler: pid=%d, name=%s, q_level=%d, cpu_burst=%d, cpu_wait=%d, io_wait_time=%d, end_time=%d, total_cpu_time=%d\n",
+                  p->pid, p->name, p->q_level, p->cpu_burst, p->cpu_wait, p->io_wait_time, p->end_time, p->total_cpu_time);
+#endif
 
         swtch(&(c->scheduler), p->context);
         switchkvm();
@@ -627,4 +639,29 @@ void procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int set_proc_info(int q_level, int cpu_burst, int cpu_wait_time, int io_wait_time, int end_time)
+{
+  struct proc *p = myproc();
+
+  if (p == 0)
+    return -1;
+
+  acquire(&ptable.lock);
+  p->q_level = q_level;
+  p->cpu_burst = cpu_burst;
+  p->cpu_wait = cpu_wait_time;
+  p->io_wait_time = io_wait_time;
+  p->end_time = end_time;
+  release(&ptable.lock);
+
+#ifdef DEBUG
+  if (p)
+  {
+    cprintf("Set process %d's info complete\n", p->pid);
+  }
+#endif
+
+  return 0;
 }
