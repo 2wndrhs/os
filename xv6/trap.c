@@ -14,6 +14,13 @@ extern uint vectors[]; // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+// External declaration of the process table
+extern struct
+{
+  struct spinlock lock;
+  struct proc proc[NPROC];
+} ptable;
+
 void tvinit(void)
 {
   int i;
@@ -43,11 +50,26 @@ void update_process_state(struct proc *p)
   {
   case RUNNING:
     p->cpu_burst++;
-    p->end_time++; // Increment total CPU usage time
+    p->total_cpu_time++;
+
+    if (p->end_time > 0 && p->total_cpu_time >= p->end_time)
+    {
+#ifdef DEBUG
+      cprintf("PID: %d uses %d ticks in mlfq[%d], total(%d/%d)\n", p->pid, p->cpu_burst, p->q_level, p->total_cpu_time, p->end_time);
+      cprintf("PID: %d used %d ticks. terminated\n", p->pid, p->total_cpu_time);
+#endif
+
+      p->killed = 1; // Mark the process as killed
+      return;
+    }
 
     // Check if process has used up its time quantum
     if (p->cpu_burst >= time_slice[p->q_level])
     {
+#ifdef DEBUG
+      cprintf("PID: %d uses %d ticks in mlfq[%d], total(%d/%d)\n", p->pid, p->cpu_burst, p->q_level, p->total_cpu_time, p->end_time);
+#endif
+
       if (p->q_level < 3)
       {
         // Move to lower priority queue
@@ -62,7 +84,6 @@ void update_process_state(struct proc *p)
         // Already at lowest queue, just reset CPU burst
         p->cpu_burst = 0;
       }
-      yield(); // Force context switch
     }
     break;
 
@@ -72,6 +93,9 @@ void update_process_state(struct proc *p)
     // Implement aging mechanism
     if (p->cpu_wait >= 250 && p->q_level > 0)
     {
+#ifdef DEBUG
+      cprintf("PID: %d Aging\n", p->pid);
+#endif
       // Move to higher priority queue
       p->q_level--;
       // Reset counters
@@ -113,7 +137,20 @@ void trap(struct trapframe *tf)
       struct proc *p = myproc();
       if (p != 0 && p->pid > 2) // Skip updating for idle, init, and shell processes
       {
+        acquire(&ptable.lock);
+
         update_process_state(p);
+
+        struct proc *other;
+        for (other = ptable.proc; other < &ptable.proc[NPROC]; other++)
+        {
+          if (other != p)
+          {
+            update_process_state(other);
+          }
+        }
+
+        release(&ptable.lock);
       }
 
       wakeup(&ticks);
