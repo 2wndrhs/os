@@ -60,6 +60,12 @@ struct proc
   struct file *ofile[NOFILE]; // Open files
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
+
+  int q_level;      // 현재 큐 레벨 (0-3)
+  int cpu_burst;    // Time Slice 내에서 CPU 사용 시간
+  int cpu_wait;     // RUNNABLE 상태에서 대기한 시간
+  int io_wait_time; // SLEEPING 상태에서 대기한 시간
+  int end_time;     // 총 CPU 할당량
 };
 
 // Process memory is laid out contiguously, low addresses first:

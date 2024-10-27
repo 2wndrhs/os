@@ -30,6 +30,63 @@ void idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
+// Time slices for each queue level
+static int time_slice[4] = {10, 20, 40, 80};
+
+// Process state update helper function
+void update_process_state(struct proc *p)
+{
+  if (p == 0)
+    return;
+
+  switch (p->state)
+  {
+  case RUNNING:
+    p->cpu_burst++;
+    p->end_time++; // Increment total CPU usage time
+
+    // Check if process has used up its time quantum
+    if (p->cpu_burst >= time_slice[p->q_level])
+    {
+      if (p->q_level < 3)
+      {
+        // Move to lower priority queue
+        p->q_level++;
+        // Reset counters
+        p->cpu_burst = 0;
+        p->cpu_wait = 0;
+        p->io_wait_time = 0;
+      }
+      else
+      {
+        // Already at lowest queue, just reset CPU burst
+        p->cpu_burst = 0;
+      }
+      yield(); // Force context switch
+    }
+    break;
+
+  case RUNNABLE:
+    p->cpu_wait++;
+
+    // Implement aging mechanism
+    if (p->cpu_wait >= 250 && p->q_level > 0)
+    {
+      // Move to higher priority queue
+      p->q_level--;
+      // Reset counters
+      p->cpu_burst = 0;
+      p->cpu_wait = 0;
+      p->io_wait_time = 0;
+    }
+    break;
+
+  case SLEEPING:
+    p->io_wait_time++;
+    break;
+  }
+}
+
 // PAGEBREAK: 41
 void trap(struct trapframe *tf)
 {
@@ -51,6 +108,14 @@ void trap(struct trapframe *tf)
     {
       acquire(&tickslock);
       ticks++;
+
+      // Update process state metrics on every timer tick
+      struct proc *p = myproc();
+      if (p != 0 && p->pid > 2) // Skip updating for idle, init, and shell processes
+      {
+        update_process_state(p);
+      }
+
       wakeup(&ticks);
       release(&tickslock);
     }

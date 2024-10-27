@@ -21,6 +21,8 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+#define NQUEUE 4
+
 void pinit(void)
 {
   initlock(&ptable.lock, "ptable");
@@ -104,6 +106,19 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+
+  // Initialize MLFQ related fields
+  p->q_level = 0; // Start at highest priority
+  p->cpu_burst = 0;
+  p->cpu_wait = 0;
+  p->io_wait_time = 0;
+  p->end_time = 0;
+
+  // init, idle, shell 프로세스는 최하위 큐에 배치
+  if (p->pid <= 2)
+  { // pid 1: init, pid 2: shell
+    p->q_level = 3;
+  }
 
   release(&ptable.lock);
 
@@ -360,33 +375,43 @@ void scheduler(void)
     // Loop over process table looking for process to run.
     // acquire() 함수를 호출하여 프로세스 테이블 락 획득
     acquire(&ptable.lock);
-    // ptable.proc 배열을 순회하면서 프로세스의 상태가 RUNNABLE인 프로세스를 찾음
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    // Iterate through queue levels (0 to 3)
+    for (int level = 0; level < NQUEUE; level++)
     {
-      if (p->state != RUNNABLE)
-        continue;
+      struct proc *selected = 0;
+      int max_io_wait = -1;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;        // 현재 CPU에서 실행할 프로세스를 설정
-      switchuvm(p);       // 사용자 가상 메모리 공간으로 전환
-      p->state = RUNNING; // 프로세스의 상태를 RUNNING으로 변경
+      // Find process with highest I/O wait time in current queue level
+      for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if (p->state != RUNNABLE || p->q_level != level)
+          continue;
 
-      // swtch() 함수를 호출하여 현재 CPU 컨텍스트를 저장하고,
-      // 선택된 프로세스의 컨텍스트로 전환
-      swtch(&(c->scheduler), p->context);
+        // Select process with highest I/O wait time
+        if (p->io_wait_time >= max_io_wait)
+        {
+          max_io_wait = p->io_wait_time;
+          selected = p;
+        }
+      }
 
-      // 프로세스가 실행을 마치고 다시 스케줄러로 돌아오면
-      // 커널 가상 메모리 공간으로 전환
-      switchkvm();
+      if (selected)
+      {
+        p = selected;
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        c->proc = 0;
+
+        // Found and ran a process, break out of level loop
+        break;
+      }
     }
 
-    // 프로세스 테이블 락 해제
     release(&ptable.lock);
   }
 }
