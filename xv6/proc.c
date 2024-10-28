@@ -114,6 +114,7 @@ found:
   p->io_wait_time = 0;
   p->end_time = -1;
   p->total_cpu_time = 0;
+  p->queue_enter_time = ticks;
 
   // init, idle, shell 프로세스는 최하위 큐에 배치
   if (p->pid <= 2)
@@ -381,33 +382,44 @@ void scheduler(void)
     // Loop over process table looking for process to run.
     // acquire() 함수를 호출하여 프로세스 테이블 락 획득
     acquire(&ptable.lock);
-    // Iterate through queue levels (0 to 3)
+    // 0번째 큐부터 3번째 큐까지 순회
     for (int level = 0; level < NQUEUE; level++)
     {
-      struct proc *selected = 0;
-      int max_io_wait = -1;
+      struct proc *selected = 0;  // 실행할 프로세스
+      int max_io_wait = -1;       // 큐 내에서 가장 io_wait_time이 큰 프로세스를 찾기 위한 변수
+      uint latest_enter_time = 0; // 큐 내에서 가장 최근에 들어온 프로세스를 찾기 위한 변수
 
-      // Find process with highest I/O wait time in current queue level
+      // 현재 큐 레벨에서 io_wait_time이 가장 큰 프로세스를 찾기
       for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       {
+        // RUNNABLE 상태이고 현재 큐 레벨에 속한 프로세스만 고려
         if (p->state != RUNNABLE || p->q_level != level)
           continue;
 
-        // Select process with highest I/O wait time
+        // io_wait_time이 더 큰 경우 해당 프로세스를 선택
         if (p->io_wait_time > max_io_wait)
         {
           max_io_wait = p->io_wait_time;
+          latest_enter_time = p->queue_enter_time;
+          selected = p;
+        }
+
+        // io_wait_time이 같은 경우, 큐 진입 시간이 더 최근인 프로세스 선택
+        if (p->io_wait_time == max_io_wait && p->queue_enter_time > latest_enter_time)
+        {
+          latest_enter_time = p->queue_enter_time;
           selected = p;
         }
       }
 
+      // 실행할 프로세스가 선택되었으면 해당 프로세스를 실행
       if (selected)
       {
         p = selected;
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-
+// 디버깅 출력
 #ifdef SCHEDULER_DEBUG
         if (p)
           cprintf("scheduler: pid=%d, name=%s, q_level=%d, cpu_burst=%d, cpu_wait=%d, io_wait_time=%d, end_time=%d, total_cpu_time=%d\n",
@@ -419,7 +431,7 @@ void scheduler(void)
 
         c->proc = 0;
 
-        // Found and ran a process, break out of level loop
+        // 프로세스 실행이 완료되었으므로 다시 큐 레벨 0부터 탐색
         break;
       }
     }
