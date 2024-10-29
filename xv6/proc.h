@@ -67,8 +67,9 @@ struct proc
   int io_wait_time; // SLEEPING 상태에서 대기한 시간
   int end_time;     // 프로세스가 필요한 CPU 할당량
 
-  int total_cpu_time;   // 프로세스가 CPU를 사용한 총 시간
-  int queue_enter_time; // 프로세스가 현재 큐에 들어온 시간
+  int total_cpu_time;       // 프로세스가 CPU를 사용한 총 시간
+  int queue_enter_time;     // 프로세스가 현재 큐에 들어온 시간
+  int time_slice_exhausted; // 현재 큐의 Time Slice를 모두 사용하였는지 여부
 };
 
 // Process memory is laid out contiguously, low addresses first:

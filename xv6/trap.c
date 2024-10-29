@@ -47,8 +47,9 @@ void update_process_state(struct proc *p)
   {
   // 프로세스의 상태가 RUNNING인 경우
   case RUNNING:
-    p->cpu_burst++;      // 타임 슬라이스 내 CPU 사용 시간 증가
-    p->total_cpu_time++; // 총 CPU 사용 시간 증가
+    p->cpu_burst++;              // 타임 슬라이스 내 CPU 사용 시간 증가
+    p->total_cpu_time++;         // 총 CPU 사용 시간 증가
+    p->time_slice_exhausted = 0; // 타임 슬라이스를 모두 사용하지 않은 상태로 변경
 
     // 프로세스의 총 CPU 사용 시간이 프로세스가 필요한 CPU 할당량을 넘은 경우
     if (p->end_time > 0 && p->total_cpu_time >= p->end_time)
@@ -66,6 +67,8 @@ void update_process_state(struct proc *p)
     // 타임 슬라이스 내 CPU 사용 시간이 해당 큐 레벨의 타임 슬라이스를 넘은 경우
     if (p->cpu_burst >= time_slice[p->q_level])
     {
+      // 타임 슬라이스를 모두 사용한 상태로 변경
+      p->time_slice_exhausted = 1;
 // 디버깅 출력
 #ifdef DEBUG
       cprintf("PID: %d uses %d ticks in mlfq[%d], total(%d/%d)\n", p->pid, p->cpu_burst, p->q_level, p->total_cpu_time, p->end_time);
