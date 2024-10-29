@@ -33,6 +33,7 @@ int main(void)
         }
     }
 
+    // wait for all child processes to finish
     for (int i = 0; i < child_count; i++)
     {
         wait();

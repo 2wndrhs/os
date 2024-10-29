@@ -93,6 +93,7 @@ int sys_uptime(void)
   return xticks;
 }
 
+// 프로세스의 초기 q_level, cpu_burst, cpu_wait_time, io_wait_time, end_time을 설정할 수 있는 시스템 콜
 int sys_set_proc_info(void)
 {
   int q_level, cpu_burst, cpu_wait_time, io_wait_time, end_time;
