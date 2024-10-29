@@ -382,7 +382,6 @@ void scheduler(void)
     sti();
 
     // Loop over process table looking for process to run.
-    // acquire() 함수를 호출하여 프로세스 테이블 락 획득
     acquire(&ptable.lock);
 
     // 0번째 큐부터 3번째 큐까지 순회
@@ -413,14 +412,14 @@ void scheduler(void)
         else if (p->q_level == level)
         {
           // io_wait_time이 더 큰 경우 해당 프로세스를 선택
-          if (p->q_level == level && p->io_wait_time > max_io_wait)
+          if (p->io_wait_time > max_io_wait)
           {
             max_io_wait = p->io_wait_time;
             latest_enter_time = p->queue_enter_time;
             selected = p;
           }
           // io_wait_time이 같은 경우, 큐 진입 시간이 더 최근인 프로세스 선택
-          else if (p->q_level == level && p->io_wait_time == max_io_wait && p->queue_enter_time >= latest_enter_time)
+          else if (p->io_wait_time == max_io_wait && p->queue_enter_time >= latest_enter_time)
           {
             latest_enter_time = p->queue_enter_time;
             selected = p;
@@ -663,20 +662,26 @@ void procdump(void)
   }
 }
 
+// 프로세스 q_level, cpu_burst, cpu_wait_time, io_wait_time, end_time 설정 함수
 int set_proc_info(int q_level, int cpu_burst, int cpu_wait_time, int io_wait_time, int end_time)
 {
+  // 현재 실행 중인 프로세스 구조체 포인터 획득
   struct proc *p = myproc();
 
   if (p == 0)
     return -1;
 
+  // 프로세스 테이블 락 획득
   acquire(&ptable.lock);
+
   p->q_level = q_level;
   p->cpu_burst = cpu_burst;
   p->cpu_wait = cpu_wait_time;
   p->io_wait_time = io_wait_time;
   p->end_time = end_time;
-  p->total_cpu_time = 0;
+  p->total_cpu_time = 0; // 프로세스의 총 CPU 사용 시간 초기화
+
+  // 프로세스 테이블 락 해제
   release(&ptable.lock);
 
 #ifdef DEBUG
