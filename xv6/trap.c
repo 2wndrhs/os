@@ -53,23 +53,30 @@ void trap(struct trapframe *tf)
       acquire(&tickslock);
       ticks++;
 
-      // Check for delayed deallocation
-      struct proc *p = myproc();
+      // 메모리 지연 해제 처리
+      struct proc *p = myproc(); // 현재 실행중인 프로세스
+      // 메모리 해제 요청이 유효한지 확인
       if (p && p->dealloc_size > 0 && p->dealloc_ticks > 0)
       {
+        // 입력받은 지연 시간이 경과했는지 확인
         if ((ticks - p->dealloc_start) >= p->dealloc_ticks)
         {
-          // Time to deallocate
+          // 입력받은 메모리 해제 크기만큼 메모리 해제
           deallocuvm(p->pgdir, p->sz + p->dealloc_size, p->sz);
+
+          // 해제 관련 상태 초기화
           p->dealloc_size = 0;
           p->dealloc_ticks = 0;
 
+          // 메모리 해제 작업 완료 시간 출력
           struct rtcdate r;
           cmostime(&r);
           cprintf("Memory deallocation execute: %d-%d-%d %d:%d:%d\n",
                   r.year, r.month, r.day, r.hour, r.minute, r.second);
           sys_memstat();
-          p->killed = 1; // Mark for termination instead of immediate exit
+
+          // 프로세스 종료 표시
+          p->killed = 1;
         }
       }
 

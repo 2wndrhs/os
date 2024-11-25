@@ -60,9 +60,9 @@ struct proc
   struct file *ofile[NOFILE]; // Open files
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
-  uint dealloc_size;          // Size to deallocate
-  uint dealloc_ticks;         // Ticks to wait before deallocation
-  uint dealloc_start;         // Starting tick for deallocation
+  uint dealloc_size;          // 할당 해제할 메모리 크기
+  uint dealloc_ticks;         // 할당 해제 전 대기할 틱
+  uint dealloc_start;         // 할당 해제 요청이 시작된 틱
 };
 
 // Process memory is laid out contiguously, low addresses first:
