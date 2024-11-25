@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "date.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -62,9 +63,13 @@ void trap(struct trapframe *tf)
           deallocuvm(p->pgdir, p->sz + p->dealloc_size, p->sz);
           p->dealloc_size = 0;
           p->dealloc_ticks = 0;
-          cprintf("Memory deallocation completed at tick: %d\n", ticks);
-          sys_memstat(); // memstat 시스템 콜 호출
-          exit();        // Exit the process after deallocation
+
+          struct rtcdate r;
+          cmostime(&r);
+          cprintf("Memory deallocation execute: %d-%d-%d %d:%d:%d\n",
+                  r.year, r.month, r.day, r.hour, r.minute, r.second);
+          sys_memstat();
+          p->killed = 1; // Mark for termination instead of immediate exit
         }
       }
 

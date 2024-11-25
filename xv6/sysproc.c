@@ -128,8 +128,10 @@ int sys_ssusbrk(void)
   curproc->dealloc_start = ticks;
   curproc->sz = addr;
 
-  cprintf("Deallocation requested at tick: %d\n", ticks);
-  cprintf("Total pending deallocation size: %d\n", curproc->dealloc_size);
+  struct rtcdate r;
+  cmostime(&r);
+  cprintf("Memory deallocation request(%d): %d-%d-%d %d:%d:%d\n",
+          delay_ticks, r.year, r.month, r.day, r.hour, r.minute, r.second);
   return addr;
 }
 
@@ -137,33 +139,36 @@ int sys_memstat(void)
 {
   struct proc *curproc = myproc();
   pde_t *pgdir = curproc->pgdir;
-  uint i, j;
+  uint sz = PGROUNDUP(curproc->sz);
+
+  uint i;
   uint virt_pages = 0;
   uint phys_pages = 0;
 
-  // Count pages
-  for (i = 0; i < NPDENTRIES; i++)
-  {
-    if (pgdir[i] & PTE_P)
-    {
-      pte_t *pgtab = (pte_t *)P2V(PTE_ADDR(pgdir[i]));
-      cprintf("PDE %d: %x\n", i, pgdir[i]);
+  virt_pages = sz / PGSIZE;
 
-      for (j = 0; j < NPTENTRIES; j++)
-      {
-        if (pgtab[j] & PTE_P)
-        {
-          phys_pages++;
-          cprintf("  PTE %d: %x\n", j, pgtab[j]);
-        }
-        if (pgtab[j] & (PTE_P | PTE_U))
-          virt_pages++;
-      }
+  pte_t *pgtab = (pte_t *)P2V(PTE_ADDR(pgdir[0]));
+  for (i = 0; i < NPTENTRIES && i * PGSIZE < sz; i++)
+  {
+    if (pgtab[i] & PTE_P)
+    {
+      phys_pages++;
     }
   }
 
-  cprintf("Virtual pages: %d\n", virt_pages);
-  cprintf("Physical pages: %d\n", phys_pages);
+  cprintf("vp: %d, pp: %d\n", virt_pages, phys_pages);
+
+  cprintf("PDE - 0x%x\n", pgdir[0]);
+
+  cprintf("PTE");
+  for (i = 0; i < NPTENTRIES && i * PGSIZE < sz; i++)
+  {
+    if ((pgtab[i] & PTE_P) && (pgtab[i] & PTE_U))
+    {
+      cprintf(" - 0x%x", pgtab[i]);
+    }
+  }
+  cprintf("\n");
 
   return 0;
 }
