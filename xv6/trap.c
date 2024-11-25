@@ -63,8 +63,8 @@ void trap(struct trapframe *tf)
           p->dealloc_size = 0;
           p->dealloc_ticks = 0;
           cprintf("Memory deallocation completed at tick: %d\n", ticks);
-          memstat(); // Print memory status
-          exit();    // Exit the process after deallocation
+          sys_memstat(); // memstat 시스템 콜 호출
+          exit();        // Exit the process after deallocation
         }
       }
 
