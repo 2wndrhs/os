@@ -32,25 +32,25 @@ void rb_test(char *filename, int blocks, int mode, int steps)
 	printf(1, "open and read file...\n");
 	fd = open(filename, O_RDONLY);
 
-	if (mode & MODE_COUNT)
-	{
-		printf(1, "rb_count system call start...\n");
+	// if (mode & MODE_COUNT)
+	// {
+	// 	printf(1, "rb_count system call start...\n");
 
-		if (rb_count(fd) < 0)
-			_error("rb_count system call error\n");
-		else
-			_success();
-	}
+	// 	if (rb_count(fd) < 0)
+	// 		_error("rb_count system call error\n");
+	// 	else
+	// 		_success();
+	// }
 
-	if (mode & MODE_PRINT)
-	{
-		printf(1, "rb_print system call start...\n");
+	// if (mode & MODE_PRINT)
+	// {
+	// 	printf(1, "rb_print system call start...\n");
 
-		if (rb_print(fd) < 0)
-			_error("rb_print system call error\n");
-		else
-			_success();
-	}
+	// 	if (rb_print(fd) < 0)
+	// 		_error("rb_print system call error\n");
+	// 	else
+	// 		_success();
+	// }
 
 	if (fd < 0)
 		_error("File open error\n");
@@ -75,25 +75,25 @@ void rb_test(char *filename, int blocks, int mode, int steps)
 	if (ret < 0)
 		_error("File read error\n");
 
-	if (mode & MODE_COUNT)
-	{
-		printf(1, "rb_count system call start...\n");
+	// if (mode & MODE_COUNT)
+	// {
+	// 	printf(1, "rb_count system call start...\n");
 
-		if (rb_count(fd) < 0)
-			_error("rb_count system call error\n");
-		else
-			_success();
-	}
+	// 	if (rb_count(fd) < 0)
+	// 		_error("rb_count system call error\n");
+	// 	else
+	// 		_success();
+	// }
 
-	if (mode & MODE_PRINT)
-	{
-		printf(1, "rb_print system call start...\n");
+	// if (mode & MODE_PRINT)
+	// {
+	// 	printf(1, "rb_print system call start...\n");
 
-		if (rb_print(fd) < 0)
-			_error("rb_print system call error\n");
-		else
-			_success();
-	}
+	// 	if (rb_print(fd) < 0)
+	// 		_error("rb_print system call error\n");
+	// 	else
+	// 		_success();
+	// }
 
 	printf(1, "close file descriptor...\n");
 
@@ -170,9 +170,9 @@ int main(int argc, char **argv)
 		buf[i] = BSIZE % 10;
 	}
 
-	test(1, 5, MODE_COUNT | MODE_PRINT);
-	test(2, 500, MODE_PRINT);
-	test(3, 5000, MODE_COUNT);
+	test(1, 5, MODE_DEFALUT);
+	test(2, 500, MODE_DEFALUT);
+	test(3, 5000, MODE_DEFALUT);
 	test(4, 50000, MODE_DEFALUT);
 	exit();
 }
